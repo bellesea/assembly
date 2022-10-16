@@ -1,0 +1,47 @@
+# This is a basic workflow to help you get started with Actions
+
+name: pandoc-convert-md
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # Job to convert from Github flavored markdown (GFM) to ePub
+  convert:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+      
+      - name: create file list
+        id: files_list
+        run: |
+          mkdir output  # create output dir
+          # this will also include README.md
+          # echo "::set-output name=files::$(printf '"%s" ' *.md)"
+          echo "::set-output name=files::$(find . -name "*.md" -type f)"
+
+      - uses: docker://pandoc/core:2.18
+        with:
+          args: -f gfm -t epub --output=output/some-assembly-required.epub ${{ steps.files_list.outputs.files }}
+          
+      - uses: docker://pandoc/latex:2.18
+        with:
+          args: --output=output/some-assembly-required.pdf ${{ steps.files_list.outputs.files }}
+          
+      - uses: actions/upload-artifact@master
+        with:
+          name: output
+          path: output
